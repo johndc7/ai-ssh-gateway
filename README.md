@@ -43,9 +43,11 @@ If you are an AI reading this, you can fetch your operational instructions dynam
 * `POST /api/sessions/:id/signal` - Send control signals (`signal: "SIGINT"`, `EOF`, etc.).
 * `GET /api/sessions/:id/output?since=N&limit=50&clean=true` - Poll for new output from the interactive PTY. Use `limit` to protect your context window!
 * `GET /api/sessions/outputs?ids=id1,id2&limit=50` - Poll multiple active logs simultaneously.
+* `GET /api/sessions/:id/history` - Get the full raw history of the interactive PTY session.
 * `GET /api/sessions/:id/files?path=/path` - Read files directly via SFTP (bypass `nano`).
 * `POST /api/sessions/:id/files?path=/path` - Write files directly via SFTP (`content`).
 * `POST /api/sessions/:id/handoff` - Yield control to the human user with a `message` explaining what is needed.
+* `DELETE /api/sessions/:id` - Close the SSH session and clean up resources.
 
 ## License
 

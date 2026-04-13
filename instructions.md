@@ -12,11 +12,13 @@ You can use this tool to interact with SSH servers that the user has authorized.
     - **Wait For Prompt (Recommended):** Pass `waitFor` (regex string) and `timeout` in the input payload. The API will block and return the output once the regex is matched, saving you from polling. Example: `{ "input": "apt update\n", "waitFor": "root@.*:~# " }`.
     - Poll output: `GET ${baseUrl}/api/sessions/:id/output?since=N&clean=true&limit=100` (Use limit to protect your context window!).
     - Monitor multiple sessions: `GET ${baseUrl}/api/sessions/outputs?ids=id1,id2&since=N&limit=50`
+    - Full History: `GET ${baseUrl}/api/sessions/:id/history` (Returns the complete raw history of the session).
 5. **Control Signals**: Use `POST ${baseUrl}/api/sessions/:id/signal` with `{ "signal": "SIGINT" }` (or EOF, SIGQUIT, SIGTSTP) instead of struggling with escape codes.
 6. **File Operations (SFTP)**: Never use `nano` or `vim` over the PTY! It wastes tokens.
     - Read: `GET ${baseUrl}/api/sessions/:id/files?path=/etc/nginx/nginx.conf`
     - Write: `POST ${baseUrl}/api/sessions/:id/files?path=/etc/nginx/nginx.conf` with `{ "content": "..." }`.
 7. **Handoff to User**: If you hit a wall (e.g., complex interactive prompt, 2FA, sudo password you don't have), call `POST ${baseUrl}/api/sessions/:id/handoff` with a `message` explaining what you need. Wait for the session status to return to `ai_control`.
+8. **Cleanup**: When finished with a session, always call `DELETE ${baseUrl}/api/sessions/:id` to securely close the connection and free up server resources.
 
 ## Passwords and Sudo
 You are allowed to type passwords if you know them. However, if you do not know a password, or a 2FA prompt appears, use the Handoff API to ask the human user to provide it.

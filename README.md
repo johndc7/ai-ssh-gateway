@@ -52,3 +52,7 @@ If you are an AI reading this, you can fetch your operational instructions dynam
 ## License
 
 MIT
+
+## Disclaimer
+
+**Use at your own risk.** This tool is provided "as is", without warranty of any kind, express or implied. The authors and contributors are not responsible for any damage, loss of data, security breaches, compromised credentials, or any other unintended consequences resulting from the use of this software. By using this tool, you acknowledge that connecting AI agents to remote systems carries inherent security risks, and you assume full responsibility for monitoring their actions and securing your infrastructure.

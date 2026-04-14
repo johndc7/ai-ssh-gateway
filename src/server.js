@@ -83,10 +83,35 @@ app.post('/api/sessions/:id/signal', (req, res) => {
 app.post('/api/sessions/:id/exec', async (req, res) => {
   const { command } = req.body;
   if (!command) return res.status(400).json({ error: 'Missing command' });
+  const sessionId = req.params.id;
+
+  const emitAndStore = (data) => {
+    io.to(sessionId).emit('terminal:data', { sessionId, data });
+    if (typeof sshManager.appendToHistory === 'function') {
+      sshManager.appendToHistory(sessionId, data);
+    }
+  };
+  
+  const formattedCmd = `\r\n\x1b[33m[Background Command]\x1b[0m \x1b[1m${command}\x1b[0m\r\n`;
+  emitAndStore(formattedCmd);
+
   try {
-    const result = await sshManager.exec(req.params.id, command);
+    const result = await sshManager.exec(
+      sessionId, 
+      command,
+      (data) => {
+        emitAndStore(data.replace(/\r?\n/g, '\r\n'));
+      },
+      (data) => {
+        emitAndStore(`\x1b[31m${data.replace(/\r?\n/g, '\r\n')}\x1b[0m`);
+      }
+    );
+    const exitMsg = `\x1b[33m[Command Exited with Code: ${result.exitCode}]\x1b[0m\r\n`;
+    emitAndStore(exitMsg);
     res.json(result);
   } catch (err) {
+    const errMsg = `\x1b[31m[Background Command Error: ${err.message}]\x1b[0m\r\n`;
+    emitAndStore(errMsg);
     res.status(500).json({ error: err.message });
   }
 });
@@ -184,6 +209,10 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '127.0.0.1', () => {
+  console.log(`AI SSH Gateway running at http://127.0.0.1:${PORT}`);
+});
+
+export default server;er.listen(PORT, '127.0.0.1', () => {
   console.log(`AI SSH Gateway running at http://127.0.0.1:${PORT}`);
 });
 

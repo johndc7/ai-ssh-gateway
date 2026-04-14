@@ -1,2 +1,2 @@
 #!/usr/bin/env node
-require('../src/server');
+import('../src/server.js');

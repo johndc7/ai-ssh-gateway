@@ -1,6 +1,7 @@
 const { Client } = require('ssh2');
 const { v4: uuidv4 } = require('uuid');
-const stripAnsi = require('strip-ansi');
+const stripAnsiModule = require('strip-ansi');
+const stripAnsi = stripAnsiModule.default || stripAnsiModule;
 
 class SSHManager {
   constructor() {
@@ -274,7 +275,9 @@ class SSHManager {
       
       const timeout = setTimeout(() => {
         cleanup();
-        reject(new Error('Timeout waiting for pattern in output'));
+        const result = this.getOutput(sessionId, startLine, true);
+        result.timeout = true;
+        resolve(result);
       }, timeoutMs);
       
       const cleanup = () => {
@@ -290,6 +293,16 @@ class SSHManager {
   getHistory(sessionId) {
     const session = this.sessions.get(sessionId);
     return session ? session.rawBuffer : '';
+  }
+
+  appendToHistory(sessionId, data) {
+    const session = this.sessions.get(sessionId);
+    if (session) {
+      session.rawBuffer += data;
+      if (session.rawBuffer.length > 500000) {
+        session.rawBuffer = session.rawBuffer.slice(-500000);
+      }
+    }
   }
 
   resize(sessionId, cols, rows) {
@@ -312,4 +325,4 @@ class SSHManager {
   }
 }
 
-module.exports = new SSHManager();
+export default new SSHManager();

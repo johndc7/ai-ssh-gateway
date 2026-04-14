@@ -287,6 +287,11 @@ document.getElementById('manual-connect-form').onsubmit = (e) => {
 };
 
 const authModal = new bootstrap.Modal(document.getElementById('authModal'));
+
+document.getElementById('authModal').addEventListener('hidden.bs.modal', () => {
+    document.getElementById('auth-form').reset();
+});
+
 window.showAuthModal = (id, host, username) => {
     document.getElementById('modal-request-id').value = id;
     document.getElementById('modal-host').value = host;
@@ -342,5 +347,7 @@ if (closeSessionBtn) {
         if (currentSessionId && confirm('Are you sure you want to close this session?')) {
             fetch(`/api/sessions/${currentSessionId}`, { method: 'DELETE' });
         }
+    };
+}     }
     };
 }

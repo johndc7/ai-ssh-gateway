@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/johndc7/ai-ssh-gateway/compare/v1.1.0...v1.1.1) (2026-04-22)
+
+
+### Bug Fixes
+
+* add repository field to package.json for npm provenance publishing ([6f830a2](https://github.com/johndc7/ai-ssh-gateway/commit/6f830a2e073db5dad1147fd59a9ce527ed24a467))
+
 # [1.1.0](https://github.com/johndc7/ai-ssh-gateway/compare/v1.0.0...v1.1.0) (2026-04-22)
 
 

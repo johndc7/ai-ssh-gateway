@@ -19,6 +19,10 @@
   ],
   "author": "",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/johndc7/ai-ssh-gateway.git"
+  },
   "dependencies": {
     "express": "^5.2.1",
     "socket.io": "^4.8.3",

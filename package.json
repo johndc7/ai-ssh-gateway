@@ -1,6 +1,6 @@
 {
   "name": "ai-ssh-gateway",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "SSH Gateway for AI Agents with Web UI and REST API",
   "main": "src/server.js",
   "bin": {

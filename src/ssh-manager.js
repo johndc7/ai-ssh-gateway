@@ -1,7 +1,6 @@
-const { Client } = require('ssh2');
-const { v4: uuidv4 } = require('uuid');
-const stripAnsiModule = require('strip-ansi');
-const stripAnsi = stripAnsiModule.default || stripAnsiModule;
+import { Client } from 'ssh2';
+import { v4 as uuidv4 } from 'uuid';
+import stripAnsi from 'strip-ansi';
 
 class SSHManager {
   constructor() {

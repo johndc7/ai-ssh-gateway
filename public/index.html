@@ -13,12 +13,12 @@
 <body class="material-dark">
     <nav class="navbar navbar-expand-lg navbar-dark shadow-sm py-2">
         <div class="container-fluid">
-            <a class="navbar-brand d-flex align-items-center" href="#">
-                <span class="material-icons me-2">terminal</span>
+            <a class="navbar-brand d-flex align-items-center" href="#" aria-label="Home">
+                <span class="material-icons me-2" aria-hidden="true">terminal</span>
                 AI SSH Gateway
             </a>
-            <div class="ms-auto d-flex align-items-center">
-                <div id="server-status" class="status-indicator status-connecting"></div>
+            <div class="ms-auto d-flex align-items-center" aria-live="polite">
+                <div id="server-status" class="status-indicator status-connecting" aria-hidden="true"></div>
                 <span class="ms-2 text-secondary small" id="server-status-text">Connecting...</span>
             </div>
         </div>
@@ -29,116 +29,121 @@
             <!-- Sidebar -->
             <div class="col-md-3 h-100 d-flex flex-column sidebar-column">
                 <div class="sidebar-section mb-4">
-                    <div class="d-flex align-items-center text-secondary mb-2 small fw-bold">
+                    <div class="d-flex align-items-center text-secondary mb-2 small fw-bold" aria-hidden="true">
                         <span class="material-icons size-16 me-1">dns</span> SESSIONS
                     </div>
-                    <div id="session-list" class="list-group list-group-flush rounded-3 overflow-auto custom-scrollbar" style="max-height: 40vh;"></div>
+                    <div id="session-list" class="list-group list-group-flush rounded-3 overflow-auto custom-scrollbar max-h-40vh" role="list" aria-label="Active Sessions"></div>
                 </div>
 
                 <div class="sidebar-section mb-4">
-                    <div class="d-flex align-items-center text-secondary mb-2 small fw-bold">
+                    <div class="d-flex align-items-center text-secondary mb-2 small fw-bold" aria-hidden="true">
                         <span class="material-icons size-16 me-1">notification_important</span> PENDING REQUESTS
                     </div>
-                    <div id="pending-requests" class="overflow-auto custom-scrollbar" style="max-height: 30vh;">
+                    <div id="pending-requests" class="overflow-auto custom-scrollbar max-h-30vh" role="list" aria-label="Pending Requests">
                         <p class="text-muted small ps-2">No pending requests.</p>
                     </div>
                 </div>
                 
                 <div class="sidebar-section mt-auto pb-4">
-                    <button class="btn btn-outline-secondary btn-sm w-100 d-flex align-items-center justify-content-center" data-bs-toggle="modal" data-bs-target="#manualConnectModal">
-                        <span class="material-icons size-16 me-1">add</span> Manual Connection
+                    <button class="btn btn-outline-secondary btn-sm w-100 d-flex align-items-center justify-content-center" data-bs-toggle="modal" data-bs-target="#manualConnectModal" aria-label="Open manual connection modal">
+                        <span class="material-icons size-16 me-1" aria-hidden="true">add</span> Manual Connection
                     </button>
                 </div>
             </div>
 
             <!-- Terminal Area -->
-            <div class="col-md-9 d-flex flex-column h-100">
+            <div class="col-md-9 d-flex flex-column h-100 terminal-column">
                 <div id="terminal-header" class="mb-3 d-none animate-fade-in">
                     <div class="card bg-dark-2 border-secondary shadow-sm">
-                        <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
+                        <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <div class="d-flex align-items-center">
-                                <span class="material-icons text-primary me-2">computer</span>
+                                <span class="material-icons text-primary me-2" aria-hidden="true">computer</span>
                                 <span id="active-session-name" class="fw-medium me-3 text-light">Session</span>
-                                <div id="control-chip" class="chip chip-ai">
-                                    <span class="material-icons me-1 size-14">auto_fix_high</span>
+                                <div id="control-chip" class="chip chip-ai" aria-live="polite">
+                                    <span class="material-icons me-1 size-14" aria-hidden="true">auto_fix_high</span>
                                     AI Control
                                 </div>
                             </div>
-                            <div class="d-flex align-items-center gap-3">
+                            <div class="terminal-header-controls">
                                 <div class="form-check form-switch small mb-0">
-                                    <input class="form-check-input" type="checkbox" id="auto-take-toggle" checked>
+                                    <input class="form-check-input" type="checkbox" id="auto-take-toggle" checked aria-label="Take control on type">
                                     <label class="form-check-label text-secondary" for="auto-take-toggle">Take control on type</label>
                                 </div>
-                                <div class="vr mx-1"></div>
+                                <div class="vr mx-1 d-none d-md-block"></div>
                                 <div class="form-check form-switch small mb-0">
-                                    <input class="form-check-input" type="checkbox" id="auto-switch-toggle" checked>
+                                    <input class="form-check-input" type="checkbox" id="auto-switch-toggle" checked aria-label="Switch to AI activity">
                                     <label class="form-check-label text-secondary" for="auto-switch-toggle">Switch to AI activity</label>
                                 </div>
-                                <div class="vr mx-1"></div>
+                                <div class="vr mx-1 d-none d-md-block"></div>
                                 <div class="form-check form-switch small mb-0">
-                                    <input class="form-check-input" type="checkbox" id="record-toggle" checked>
+                                    <input class="form-check-input" type="checkbox" id="record-toggle" checked aria-label="Record session">
                                     <label class="form-check-label text-secondary" for="record-toggle">Record session</label>
                                 </div>
-                                <button id="return-control-btn" class="btn btn-success btn-sm d-none d-flex align-items-center">
-                                    <span class="material-icons size-16 me-1">check</span> Return to AI
+                                <button id="return-control-btn" class="btn btn-success btn-sm d-none d-flex align-items-center" aria-label="Return control to AI">
+                                    <span class="material-icons size-16 me-1" aria-hidden="true">check</span> Return to AI
                                 </button>
-                                <button id="close-session-btn" class="btn btn-outline-danger btn-sm d-flex align-items-center ms-2">
-                                    <span class="material-icons size-16 me-1">logout</span> Close
+                                <button id="close-session-btn" class="btn btn-outline-danger btn-sm d-flex align-items-center ms-md-2" aria-label="Close session">
+                                    <span class="material-icons size-16 me-1" aria-hidden="true">logout</span> Close
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="flex-grow-1 position-relative d-flex flex-column">
-                    <div id="handoff-alert" class="position-absolute top-0 start-50 translate-middle-x mt-3 alert alert-info py-2 px-3 small d-none border-0 shadow-lg animate-slide-down z-3" style="min-width: 300px; max-width: 80%;">
+                    <div id="handoff-alert" class="position-absolute top-0 start-50 translate-middle-x mt-3 alert alert-info py-2 px-3 small d-none border-0 shadow-lg animate-slide-down z-3 min-w-300px max-w-80" role="alert">
                         <div class="d-flex align-items-center">
-                            <span class="material-icons me-2">info</span>
+                            <span class="material-icons me-2" aria-hidden="true">info</span>
                             <div><strong>AI Request:</strong> <span id="handoff-message"></span></div>
                         </div>
                     </div>
                     <div id="empty-state" class="position-absolute w-100 h-100 d-flex flex-column align-items-center justify-content-center animate-fade-in z-1">
-                        <div class="card bg-dark-2 border-secondary shadow-lg p-5 text-center" style="max-width: 500px; border-style: dashed !important;">
-                            <div class="material-icons text-primary mb-3" style="font-size: 64px;">terminal</div>
+                        <div class="card bg-dark-2 border-secondary shadow-lg p-5 text-center max-w-500px border-dashed">
+                            <div class="material-icons text-primary mb-3 font-size-64" aria-hidden="true">terminal</div>
                             <h4 class="text-light mb-3">No Active Sessions</h4>
                             <p class="text-secondary mb-4">
                                 Connect to a server manually or wait for a remote request to open a session. 
                                 Authorizing a session will securely open an SSH tunnel in memory.
                             </p>
                             <div class="d-flex gap-2 justify-content-center">
-                                <button class="btn btn-primary px-4" data-bs-toggle="modal" data-bs-target="#manualConnectModal">
+                                <button class="btn btn-primary px-4" data-bs-toggle="modal" data-bs-target="#manualConnectModal" aria-label="Open manual connection modal">
                                     Manual Connect
                                 </button>
                             </div>
                         </div>
                     </div>
-                    <div id="terminal-container" class="h-100 rounded-3 shadow-lg border border-dark overflow-hidden d-none"></div>
+                    <div id="terminal-container" class="h-100 rounded-3 shadow-lg border border-dark overflow-hidden d-none" aria-label="Terminal output"></div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container" style="z-index: 1080;" aria-live="polite">
+        <!-- Toasts will be injected here -->
+    </div>
+
     <!-- Modals -->
-    <div class="modal fade" id="authModal" tabindex="-1">
+    <div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content bg-dark border-secondary">
                 <div class="modal-header border-secondary">
-                    <h5 class="modal-title">Authorize AI Session</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title" id="authModalLabel">Authorize AI Session</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <p id="modal-request-desc"></p>
                     <form id="auth-form">
                         <input type="hidden" id="modal-request-id">
                         <div class="mb-3">
-                            <label class="form-label">Host</label>
+                            <label for="modal-host" class="form-label">Host</label>
                             <input type="text" id="modal-host" class="form-control bg-dark text-light border-secondary" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Username</label>
+                            <label for="modal-username" class="form-label">Username</label>
                             <input type="text" id="modal-username" class="form-control bg-dark text-light border-secondary" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Password</label>
+                            <label for="modal-password" class="form-label">Password</label>
                             <input type="password" id="modal-password" class="form-control bg-dark text-light border-secondary" required autofocus>
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Authorize & Connect</button>
@@ -148,28 +153,28 @@
         </div>
     </div>
 
-    <div class="modal fade" id="manualConnectModal" tabindex="-1">
+    <div class="modal fade" id="manualConnectModal" tabindex="-1" aria-labelledby="manualConnectModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content bg-dark border-secondary">
                 <div class="modal-header border-secondary">
-                    <h5 class="modal-title d-flex align-items-center">
-                        <span class="material-icons me-2">add_circle</span>
+                    <h5 class="modal-title d-flex align-items-center" id="manualConnectModalLabel">
+                        <span class="material-icons me-2" aria-hidden="true">add_circle</span>
                         Manual Connection
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="manual-connect-form">
                         <div class="mb-3">
-                            <label class="form-label">Hostname / IP</label>
+                            <label for="manual-host" class="form-label">Hostname / IP</label>
                             <input type="text" id="manual-host" class="form-control bg-dark text-light border-secondary" placeholder="e.g. 192.168.1.10" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Username</label>
+                            <label for="manual-user" class="form-label">Username</label>
                             <input type="text" id="manual-user" class="form-control bg-dark text-light border-secondary" placeholder="e.g. root" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Password</label>
+                            <label for="manual-password" class="form-label">Password</label>
                             <input type="password" id="manual-password" class="form-control bg-dark text-light border-secondary" placeholder="Enter SSH password" required>
                         </div>
                         <button type="submit" class="btn btn-primary w-100 py-2 mt-2">Connect to Server</button>

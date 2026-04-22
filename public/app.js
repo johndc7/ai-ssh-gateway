@@ -21,6 +21,34 @@ let currentSessionId = null;
 let sessions = [];
 let pendingRequests = [];
 
+// Toast Notifications
+function showToast(title, message, type = 'info') {
+    const toastContainer = document.getElementById('toast-container');
+    const toastEl = document.createElement('div');
+    toastEl.className = `toast align-items-center text-bg-${type} border-0 mb-2`;
+    toastEl.setAttribute('role', 'alert');
+    toastEl.setAttribute('aria-live', 'assertive');
+    toastEl.setAttribute('aria-atomic', 'true');
+    
+    toastEl.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <strong>${title}</strong><br/>
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toastEl);
+    const toast = new bootstrap.Toast(toastEl, { autohide: true, delay: 5000 });
+    toast.show();
+    
+    toastEl.addEventListener('hidden.bs.toast', () => {
+        toastEl.remove();
+    });
+}
+
 function getOrCreateTerminal(sessionId) {
     if (terminals[sessionId]) return terminals[sessionId];
 
@@ -98,11 +126,17 @@ socket.on('connect', () => {
 socket.on('disconnect', () => {
     serverStatusText.textContent = 'Disconnected';
     serverStatusDot.className = 'status-indicator status-disconnected';
+    showToast('Connection Lost', 'Disconnected from the gateway server.', 'danger');
+});
+
+socket.on('connect_error', (err) => {
+    showToast('Connection Error', 'Failed to connect to gateway server.', 'danger');
 });
 
 socket.on('session:request', (request) => {
     pendingRequests.push(request);
     renderPending();
+    showToast('New Connection Request', `Incoming request from ${request.username}@${request.host}`, 'info');
 });
 
 socket.on('session:started', (session) => {
@@ -150,27 +184,32 @@ socket.on('session:closed', () => {
 
 // UI Actions
 async function refreshSessions() {
-    const res = await fetch('/api/sessions');
-    const data = await res.json();
-    sessions = data.active;
-    pendingRequests = data.pending;
-    renderSessions();
-    renderPending();
-    
-    sessions.forEach(s => {
-        socket.emit('session:join', s.id);
-        getOrCreateTerminal(s.id);
-    });
+    try {
+        const res = await fetch('/api/sessions');
+        if (!res.ok) throw new Error('Failed to fetch sessions');
+        const data = await res.json();
+        sessions = data.active;
+        pendingRequests = data.pending;
+        renderSessions();
+        renderPending();
+        
+        sessions.forEach(s => {
+            socket.emit('session:join', s.id);
+            getOrCreateTerminal(s.id);
+        });
 
-    if (sessions.length > 0) {
-        if (!currentSessionId || !sessions.find(s => s.id === currentSessionId)) {
-            switchSession(sessions[0].id);
+        if (sessions.length > 0) {
+            if (!currentSessionId || !sessions.find(s => s.id === currentSessionId)) {
+                switchSession(sessions[0].id);
+            }
+        } else {
+            terminalHeader.classList.add('d-none');
+            terminalContainer.classList.add('d-none');
+            emptyState.classList.remove('d-none');
+            currentSessionId = null;
         }
-    } else {
-        terminalHeader.classList.add('d-none');
-        terminalContainer.classList.add('d-none');
-        emptyState.classList.remove('d-none');
-        currentSessionId = null;
+    } catch (err) {
+        console.error('Error refreshing sessions:', err);
     }
 }
 
@@ -179,11 +218,16 @@ function renderSessions() {
     sessions.forEach(s => {
         const item = document.createElement('a');
         item.className = `list-group-item list-group-item-action d-flex align-items-center ${s.id === currentSessionId ? 'active' : ''}`;
+        item.href = '#';
+        item.setAttribute('role', 'button');
         item.innerHTML = `
-            <span class="material-icons size-16 me-2">${s.status === 'ai_control' ? 'auto_fix_high' : 'person'}</span>
+            <span class="material-icons size-16 me-2" aria-hidden="true">${s.status === 'ai_control' ? 'auto_fix_high' : 'person'}</span>
             <div class="text-truncate flex-grow-1">${s.name}</div>
         `;
-        item.onclick = () => switchSession(s.id);
+        item.onclick = (e) => {
+            e.preventDefault();
+            switchSession(s.id);
+        };
         sessionList.appendChild(item);
     });
 }
@@ -200,11 +244,11 @@ function renderPending() {
         div.innerHTML = `
             <div class="card-body p-2">
                 <div class="d-flex align-items-center mb-1">
-                    <span class="material-icons size-16 text-primary me-1">person_add</span>
+                    <span class="material-icons size-16 text-primary me-1" aria-hidden="true">person_add</span>
                     <h6 class="card-title mb-0 small fw-bold">${r.username}@${r.host}</h6>
                 </div>
-                <p class="card-text mb-2 text-secondary" style="font-size: 0.75rem;">${r.reason || 'No reason provided'}</p>
-                <button class="btn btn-primary btn-sm w-100 py-1" style="font-size: 0.7rem;" onclick="showAuthModal('${r.id}', '${r.host}', '${r.username}')">Approve</button>
+                <p class="card-text mb-2 text-secondary font-size-075rem">${r.reason || 'No reason provided'}</p>
+                <button class="btn btn-primary btn-sm w-100 py-1 font-size-07rem" onclick="showAuthModal('${r.id}', '${r.host}', '${r.username}')" aria-label="Approve connection to ${r.host}">Approve</button>
             </div>
         `;
         pendingList.appendChild(div);
@@ -239,7 +283,7 @@ function switchSession(id) {
 
 function updateUIForStatus(status, message) {
     if (status === 'user_control') {
-        controlChip.innerHTML = '<span class="material-icons me-1 size-14">person</span> User Control';
+        controlChip.innerHTML = '<span class="material-icons me-1 size-14" aria-hidden="true">person</span> User Control';
         controlChip.className = 'chip chip-user';
         if (returnControlBtn) returnControlBtn.classList.remove('d-none');
         if (message && handoffAlert && handoffMessage) {
@@ -247,7 +291,7 @@ function updateUIForStatus(status, message) {
             handoffMessage.textContent = message;
         }
     } else {
-        controlChip.innerHTML = '<span class="material-icons me-1 size-14">auto_fix_high</span> AI Control';
+        controlChip.innerHTML = '<span class="material-icons me-1 size-14" aria-hidden="true">auto_fix_high</span> AI Control';
         controlChip.className = 'chip chip-ai';
         if (returnControlBtn) returnControlBtn.classList.add('d-none');
         if (handoffAlert) handoffAlert.classList.add('d-none');
@@ -256,6 +300,7 @@ function updateUIForStatus(status, message) {
 
 // Event Listeners
 const manualConnectModal = new bootstrap.Modal(document.getElementById('manualConnectModal'));
+const authModal = new bootstrap.Modal(document.getElementById('authModal'));
 
 document.getElementById('manual-connect-form').onsubmit = (e) => {
     e.preventDefault();
@@ -267,26 +312,48 @@ document.getElementById('manual-connect-form').onsubmit = (e) => {
     const host = document.getElementById('manual-host').value;
     const user = document.getElementById('manual-user').value;
     const pass = document.getElementById('manual-password').value;
+    const sessionName = `${user}@${host}`;
     
     fetch('/api/sessions/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ host, username: user, reason: 'Manual Connection' })
-    }).then(res => res.json()).then(req => {
+    }).then(res => {
+        if (!res.ok) throw new Error('Failed to request session');
+        return res.json();
+    }).then(req => {
         socket.emit('session:connect', {
             requestId: req.id,
             authConfig: { host, username: user, password: pass },
-            name: `${user}@${host}`
+            name: sessionName
         });
+        
+        const onStarted = (session) => {
+            if (session.name === sessionName) {
+                manualConnectModal.hide();
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+                document.getElementById('manual-connect-form').reset();
+                showToast('Success', `Connected to ${sessionName}`, 'success');
+                socket.off('session:started', onStarted);
+            }
+        };
+        socket.on('session:started', onStarted);
+
         setTimeout(() => {
-            manualConnectModal.hide();
-            submitBtn.disabled = false;
-            submitBtn.textContent = originalText;
-        }, 2000);
+            if (submitBtn.disabled) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+                showToast('Warning', 'Connection request sent, but no confirmation received.', 'warning');
+                socket.off('session:started', onStarted);
+            }
+        }, 10000);
+    }).catch(err => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        showToast('Error', err.message, 'danger');
     });
 };
-
-const authModal = new bootstrap.Modal(document.getElementById('authModal'));
 
 document.getElementById('authModal').addEventListener('hidden.bs.modal', () => {
     document.getElementById('auth-form').reset();
@@ -312,18 +379,34 @@ document.getElementById('auth-form').onsubmit = (e) => {
     const host = document.getElementById('modal-host').value;
     const username = document.getElementById('modal-username').value;
     const password = document.getElementById('modal-password').value;
+    const sessionName = `${username}@${host}`;
     
     socket.emit('session:connect', {
         requestId,
         authConfig: { host, username, password },
-        name: `${username}@${host}`
+        name: sessionName
     });
     
+    const onStarted = (session) => {
+        if (session.name === sessionName) {
+            authModal.hide();
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            document.getElementById('auth-form').reset();
+            showToast('Success', `Connected to ${sessionName}`, 'success');
+            socket.off('session:started', onStarted);
+        }
+    };
+    socket.on('session:started', onStarted);
+
     setTimeout(() => {
-        authModal.hide();
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
-    }, 2000);
+        if (submitBtn.disabled) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            showToast('Warning', 'Connection request sent, but no confirmation received.', 'warning');
+            socket.off('session:started', onStarted);
+        }
+    }, 10000);
 };
 
 if (recordToggle) {
@@ -347,7 +430,5 @@ if (closeSessionBtn) {
         if (currentSessionId && confirm('Are you sure you want to close this session?')) {
             fetch(`/api/sessions/${currentSessionId}`, { method: 'DELETE' });
         }
-    };
-}     }
     };
 }

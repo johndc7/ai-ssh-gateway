@@ -1,8 +1,13 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const path = require('path');
-const sshManager = require('./ssh-manager');
+import express from 'express';
+import http from 'http';
+import { Server } from 'socket.io';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+import sshManager from './ssh-manager.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
@@ -159,7 +164,7 @@ app.get('/instructions', (req, res) => {
 
     try {
         const instructionsPath = path.join(__dirname, '../instructions.md');
-        let content = require('fs').readFileSync(instructionsPath, 'utf8');
+        let content = fs.readFileSync(instructionsPath, 'utf8');
         content = content.replace(/\$\{baseUrl\}/g, baseUrl);
         res.send(content.trim());
     } catch (err) {
@@ -212,8 +217,4 @@ server.listen(PORT, '127.0.0.1', () => {
   console.log(`AI SSH Gateway running at http://127.0.0.1:${PORT}`);
 });
 
-export default server;er.listen(PORT, '127.0.0.1', () => {
-  console.log(`AI SSH Gateway running at http://127.0.0.1:${PORT}`);
-});
-
-module.exports = server;
+export default server;

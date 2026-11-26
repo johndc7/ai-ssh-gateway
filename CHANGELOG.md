@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/johndc7/ai-ssh-gateway/compare/v1.1.1...v1.2.0) (2026-11-26)
+
+
+### Features
+
+* add MCP server, NetBird SSH, local terminals, and security/bug fixes ([a324fe7](https://github.com/johndc7/ai-ssh-gateway/commit/a324fe70c2d9c54d6f5bb808d1adc0162d6c2691))
+
 ## [1.1.1](https://github.com/johndc7/ai-ssh-gateway/compare/v1.1.0...v1.1.1) (2026-04-22)
 
 

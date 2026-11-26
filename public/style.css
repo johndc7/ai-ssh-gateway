@@ -66,6 +66,8 @@ body.material-dark {
 }
 .chip-ai { background-color: rgba(187, 134, 252, 0.2); color: var(--material-primary); border: 1px solid rgba(187, 134, 252, 0.3); }
 .chip-user { background-color: rgba(3, 218, 198, 0.2); color: var(--material-secondary); border: 1px solid rgba(3, 218, 198, 0.3); }
+.chip-netbird { background-color: rgba(255, 152, 0, 0.18); color: #ffb74d; border: 1px solid rgba(255, 183, 77, 0.35); }
+.chip-local { background-color: rgba(100, 181, 246, 0.18); color: #64b5f6; border: 1px solid rgba(100, 181, 246, 0.35); }
 
 /* Terminal */
 #terminal-container {

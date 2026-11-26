@@ -1,29 +1,48 @@
 # AI SSH Gateway Instructions
 
-You can use this tool to interact with SSH servers that the user has authorized.
+You can use this gateway (via MCP tools or the HTTP REST API) to interact safely with SSH and NetBird SSH servers authorized by the human operator.
 
 ## Workflow
 
-1. **Check Sessions**: Call `GET ${baseUrl}/api/sessions` to see active and pending sessions.
-2. **Request New Session**: Call `POST ${baseUrl}/api/sessions/request` with `host`, `username`, and `reason`. The user will see this in their UI and can choose to connect.
-3. **Run Synchronous Commands**: For simple tasks (ls, cat, checking status), use `POST ${baseUrl}/api/sessions/:id/exec` with `{ "command": "..." }`. This is clean and doesn't interfere with the interactive terminal.
-4. **Interactive PTY**: For interactive tools or stateful shell sessions:
-    - Send input: `POST ${baseUrl}/api/sessions/:id/input` with `{ "input": "command\n" }`.
-    - **Wait For Prompt (Recommended):** Pass `waitFor` (regex string) and `timeout` in the input payload. The API will block and return the output once the regex is matched, saving you from polling. Example: `{ "input": "apt update\n", "waitFor": "root@.*:~# " }`.
-    - Poll output: `GET ${baseUrl}/api/sessions/:id/output?since=N&clean=true&limit=100` (Use limit to protect your context window!).
-    - Monitor multiple sessions: `GET ${baseUrl}/api/sessions/outputs?ids=id1,id2&since=N&limit=50`
-    - Full History: `GET ${baseUrl}/api/sessions/:id/history` (Returns the complete raw history of the session).
-5. **Control Signals**: Use `POST ${baseUrl}/api/sessions/:id/signal` with `{ "signal": "SIGINT" }` (or EOF, SIGQUIT, SIGTSTP) instead of struggling with escape codes.
-6. **File Operations (SFTP)**: Never use `nano` or `vim` over the PTY! It wastes tokens.
-    - Read: `GET ${baseUrl}/api/sessions/:id/files?path=/etc/nginx/nginx.conf`
-    - Write: `POST ${baseUrl}/api/sessions/:id/files?path=/etc/nginx/nginx.conf` with `{ "content": "..." }`.
-7. **Handoff to User**: If you hit a wall (e.g., complex interactive prompt, 2FA, sudo password you don't have), call `POST ${baseUrl}/api/sessions/:id/handoff` with a `message` explaining what you need. Wait for the session status to return to `ai_control`.
-8. **Cleanup**: When finished with a session, always call `DELETE ${baseUrl}/api/sessions/:id` to securely close the connection and free up server resources.
+1. **Check Sessions**:
+   - MCP: `list_sessions`
+   - REST: `GET ${baseUrl}/api/sessions` (lists active sessions, pending requests, `netbird` CLI status, and available `localShells` such as `pwsh`, `powershell`, `cmd`).
+2. **Request New Session (SSH, NetBird SSH, or Local Terminal)**:
+   - Remote SSH / NetBird:
+     - MCP: `request_session` with `host`, `username`, optional `port`, `useNetbird` (`true` for NetBird identity-aware SSH), `reason`, and `waitForApproval`.
+     - REST: `POST ${baseUrl}/api/sessions/request` with `{ "host": "...", "username": "...", "port": 22, "useNetbird": false, "reason": "..." }`.
+   - Local Terminal (`pwsh` / `powershell` / `cmd` / `bash` / `zsh`):
+     - MCP: `request_local_session` with optional `shell` (`"pwsh"`, `"powershell"`, `"cmd"`, etc.), `cwd`, `reason`, and `waitForApproval`.
+     - REST: `POST ${baseUrl}/api/sessions/request` with `{ "type": "local", "shell": "powershell", "cwd": "...", "reason": "..." }`.
+3. **Run Synchronous Commands (Preferred for non-interactive tasks)**:
+   - MCP: `exec_command` with `{ "sessionId": "...", "command": "..." }`
+   - REST: `POST ${baseUrl}/api/sessions/:id/exec` with `{ "command": "..." }`
+   - Streams output to the operator's Web UI while returning clean `{ stdout, stderr, exitCode }` without disturbing the interactive PTY.
+4. **Interactive PTY**:
+   - Send input:
+     - MCP: `send_terminal_input` (`sessionId`, `input`, optional `waitFor` regex, `timeoutMs`)
+     - REST: `POST ${baseUrl}/api/sessions/:id/input` with `{ "input": "command\n", "waitFor": "root@.*:~# ", "timeout": 10000 }`
+   - Poll output:
+     - MCP: `read_terminal_output` (`sessionId`, `since`, `limit`, `clean`)
+     - REST: `GET ${baseUrl}/api/sessions/:id/output?since=N&clean=true&limit=100` (pass `currentLine` from the previous response as `since`)
+   - Monitor multiple sessions: `GET ${baseUrl}/api/sessions/outputs?ids=id1,id2&since=N&limit=50`
+   - Full raw history:
+     - MCP: `get_terminal_history`
+     - REST: `GET ${baseUrl}/api/sessions/:id/history`
+5. **Control Signals**:
+   - MCP: `send_terminal_signal` (`SIGINT`, `EOF`, `SIGQUIT`, `SIGTSTP`)
+   - REST: `POST ${baseUrl}/api/sessions/:id/signal` with `{ "signal": "SIGINT" }`
+6. **File Operations (SFTP)**: Never use `nano` or `vim` over the PTY!
+   - Read: MCP `read_remote_file` or `GET ${baseUrl}/api/sessions/:id/files?path=/etc/nginx/nginx.conf`
+   - Write: MCP `write_remote_file` or `POST ${baseUrl}/api/sessions/:id/files?path=/etc/nginx/nginx.conf` with `{ "content": "..." }`
+7. **Handoff to User**: If you encounter `sudo` password prompts, 2FA, or complex interactive screens, yield control to the human operator:
+   - MCP: `handoff_to_user` (`sessionId`, `message`)
+   - REST: `POST ${baseUrl}/api/sessions/:id/handoff` with `{ "message": "..." }`
+   - Wait until the session `status` returns to `ai_control`.
+8. **Cleanup**: Always close sessions when finished:
+   - MCP: `close_session`
+   - REST: `DELETE ${baseUrl}/api/sessions/:id`
 
-## Passwords and Sudo
-You are allowed to type passwords if you know them. However, if you do not know a password, or a 2FA prompt appears, use the Handoff API to ask the human user to provide it.
-
-## Best Practices for High-Volume Output (tcpdump, logs)
-If you are running commands that produce massive output, DO NOT fetch the raw output into your context window.
-1. ALWAYS use server-side filtering (e.g., `tcpdump port 80 | grep "specific_thing"`).
-2. ALWAYS use the `limit=50` parameter on `GET /output` or `GET /outputs` endpoints to prevent context window crashes.
+## Best Practices for High-Volume Output (`tcpdump`, logs)
+1. Always filter server-side (e.g., `journalctl -u nginx -n 100` or `tcpdump port 80 -c 50`).
+2. Always pass a reasonable `limit` (e.g., `limit=50` or `100`) when reading PTY output to protect your context window.

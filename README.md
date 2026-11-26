@@ -1,53 +1,99 @@
 # AI SSH Gateway
 
-An interactive SSH gateway designed specifically to safely connect AI agents (like Gemini CLI, Cursor, or custom scripts) to remote servers. It provides a RESTful API for agents to interact with SSH sessions, and a modern Web UI for humans to monitor, approve, and optionally intervene.
+An interactive SSH & **NetBird SSH** gateway designed to safely connect AI agents (via **Model Context Protocol (MCP)** or REST API) to remote servers, while giving human operators real-time visibility, credential isolation, and manual override via a local Web UI.
 
 ## Features
 
-* **Secure Delegation:** AI agents never see your SSH passwords or private keys. They request access to a server, and you approve it and provide credentials via the local Web UI.
-* **Live Monitoring:** Watch everything the AI does in real-time through a persistent, browser-based terminal.
-* **Manual Override:** At any point, you can take over the session (e.g., to handle a complex interactive prompt, 2FA, or `sudo` password), and then return control back to the AI.
-* **Agent-Friendly API:** A clean REST API that provides stripped ANSI output, synchronized command execution, and long-running interactive PTY support.
-* **Zero Configuration:** Runs locally on your machine and serves the UI over a local port.
+* **Model Context Protocol (MCP) Support:** Built-in MCP server supporting both **Streamable HTTP** (`/mcp`) and **stdio** (`npx ai-ssh-gateway --mcp`). If a local gateway UI is already running, `--mcp` stdio instances automatically attach to the shared dashboard.
+* **Local Terminals (`pwsh` / `powershell` / `cmd`):** Launch local interactive ConPTY shells (`pwsh`, `powershell.exe`, `cmd.exe`, plus `bash`/`zsh`/`sh` on Linux/macOS) directly from the Web UI or let AI agents request supervised local shell access.
+* **NetBird SSH & Standard SSH:** Connect using **NetBird identity-aware SSH** (OIDC/JWT SSO via `netbird ssh proxy` or machine-identity peers) alongside traditional SSH password, PEM/OpenSSH private keys, and local SSH Agent (`SSH_AUTH_SOCK` / Windows OpenSSH Agent).
+* **Secure Delegation:** AI agents never see your SSH passwords, private keys, or NetBird SSO tokens. They request access, and you approve or reject requests from the local browser dashboard.
+* **Live Terminal Monitoring & Manual Override:** Watch every PTY interaction and background `exec` command in real time via xterm.js. Take over typing at any moment (or receive AI `handoff` requests for `sudo` / 2FA), then click **Return to AI**.
+* **SFTP File Read/Write:** Read and write remote files cleanly over SFTP without wasting tokens on terminal editors.
 
 ## Quick Start
 
-You can run the gateway directly without installing it globally:
+Start the Web UI, REST API, and Streamable HTTP MCP server:
 
 ```bash
 npx ai-ssh-gateway
 ```
 
-This will start the server and print the local URL (default: `http://127.0.0.1:3000`). Open this URL in your browser to access the dashboard.
+* **Web Dashboard:** `http://127.0.0.1:3000`
+* **Streamable HTTP MCP Endpoint:** `http://127.0.0.1:3000/mcp`
+* **Dynamic Agent Instructions:** `http://127.0.0.1:3000/instructions`
 
-## How it Works
+### CLI Options
 
-1. **Start the Gateway:** Run `npx ai-ssh-gateway`.
-2. **AI Requests Access:** Point your AI agent to `http://127.0.0.1:3000`. The agent uses the API to request an SSH session to `user@hostname`.
-3. **Human Approval:** You see the pending request in the Web UI. You click "Approve", enter the password or key details, and the gateway establishes the connection.
-4. **AI Interacts:** The AI uses the API to send commands and read output. You watch the live terminal in your browser.
-5. **Handoff (Optional):** If the AI gets stuck (e.g., needs a password), it can pause its execution and send a "handoff" message to the UI. You type in the terminal to resolve the prompt, then click "Return to AI".
+```text
+ai-ssh-gateway [options]
 
-## AI Agent Instructions
+  --port, -p <port>        Local HTTP/Web UI port (default: 3000 or PORT env)
+  --mcp                    Start MCP server over stdio (launches or attaches to Web UI on 127.0.0.1:<port>)
+  --gateway-url <url>      Connect --mcp stdio mode to an existing gateway URL
+  --api-key <token>        Require Bearer API key for REST API & MCP requests (or GATEWAY_API_KEY env)
+```
 
-If you are an AI reading this, you can fetch your operational instructions dynamically from the running gateway at:
+## Connecting MCP Clients
 
-`GET http://127.0.0.1:3000/instructions`
+### Option 1: Stdio Transport (Claude Desktop, Cursor, Antigravity, etc.)
 
-### Core API Overview
+```json
+{
+  "mcpServers": {
+    "ai-ssh-gateway": {
+      "command": "npx",
+      "args": ["-y", "ai-ssh-gateway", "--mcp"]
+    }
+  }
+}
+```
 
-* `GET /api/sessions` - List active sessions and pending requests.
-* `POST /api/sessions/request` - Request access to a new server (`host`, `username`, `reason`).
-* `POST /api/sessions/:id/exec` - Run a synchronized, clean command (`command`). Best for simple tasks.
-* `POST /api/sessions/:id/input` - Send raw input to the interactive PTY (`input`, `waitFor` regex).
-* `POST /api/sessions/:id/signal` - Send control signals (`signal: "SIGINT"`, `EOF`, etc.).
-* `GET /api/sessions/:id/output?since=N&limit=50&clean=true` - Poll for new output from the interactive PTY. Use `limit` to protect your context window!
-* `GET /api/sessions/outputs?ids=id1,id2&limit=50` - Poll multiple active logs simultaneously.
-* `GET /api/sessions/:id/history` - Get the full raw history of the interactive PTY session.
-* `GET /api/sessions/:id/files?path=/path` - Read files directly via SFTP (bypass `nano`).
-* `POST /api/sessions/:id/files?path=/path` - Write files directly via SFTP (`content`).
-* `POST /api/sessions/:id/handoff` - Yield control to the human user with a `message` explaining what is needed.
-* `DELETE /api/sessions/:id` - Close the SSH session and clean up resources.
+When launched with `--mcp`, the gateway automatically starts the local Web UI at `http://127.0.0.1:3000` (or shares an already-running gateway instance on that port).
+
+### Option 2: Streamable HTTP Transport
+
+Start `npx ai-ssh-gateway` and point your MCP client at:
+
+```text
+http://127.0.0.1:3000/mcp
+```
+
+### Exposed MCP Tools
+
+* `list_sessions` — List active sessions, pending requests, NetBird CLI status, and available local shells.
+* `request_session` — Request human approval for an SSH or NetBird SSH connection (`host`, `username`, `port`, `useNetbird`, `reason`, `waitForApproval`).
+* `request_local_session` — Request human approval for a local terminal session (`shell`: `pwsh` / `powershell` / `cmd` / `bash` / `zsh` / `sh`, `cwd`, `reason`, `waitForApproval`).
+* `exec_command` — Run a synchronous command on a dedicated SSH channel (`stdout`, `stderr`, `exitCode`).
+* `send_terminal_input` — Write to the interactive PTY shell with optional `waitFor` regex matching.
+* `read_terminal_output` — Poll buffered lines from the interactive PTY (`since`, `limit`, `clean`).
+* `get_terminal_history` — Read raw terminal output history.
+* `send_terminal_signal` — Send `SIGINT`, `EOF`, `SIGQUIT`, or `SIGTSTP` to the PTY.
+* `read_remote_file` / `write_remote_file` — Read and write remote files via SFTP.
+* `handoff_to_user` — Yield control to the human operator with an explanation banner.
+* `close_session` — Disconnect and clean up an SSH session.
+
+## NetBird SSH Support
+
+To connect to peers over [NetBird SSH](https://docs.netbird.io/how-to/access-netbird-network-resources#enable-ssh-access):
+1. Ensure the `netbird` CLI is installed locally (`NETBIRD_BIN` can override the binary path if needed) and NetBird SSH (`--allow-server-ssh`, plus `--enable-ssh-sftp` if using SFTP) is enabled on the remote peer.
+2. Either let the AI pass `useNetbird: true` when requesting a session, or choose **NetBird SSH (Identity / SSO)** in the Web UI approval / manual connection modal.
+3. The gateway automatically probes the peer with `netbird ssh detect` and tunnels JWT/SSO sessions via `netbird ssh proxy` (opening a browser SSO prompt if your token isn't cached).
+
+## Core REST API Overview
+
+* `GET /api/sessions` — List active sessions, pending requests, and NetBird availability.
+* `POST /api/sessions/request` — Request access (`host`, `username`, `port`, `useNetbird`, `reason`, `waitForApproval`).
+* `POST /api/sessions/:id/exec` — Run a clean command (`command`, `timeoutMs`).
+* `POST /api/sessions/:id/input` — Send input to interactive PTY (`input`, `waitFor`, `timeout`).
+* `POST /api/sessions/:id/signal` — Send control signals (`SIGINT`, `EOF`, `SIGQUIT`, `SIGTSTP`).
+* `GET /api/sessions/:id/output?since=N&limit=100&clean=true` — Poll interactive PTY output.
+* `GET /api/sessions/outputs?ids=id1,id2&limit=50` — Poll multiple sessions.
+* `GET /api/sessions/:id/history` — Fetch raw PTY history (`text/plain`).
+* `GET /api/sessions/:id/files?path=/path` — Read file via SFTP (`text/plain`).
+* `POST /api/sessions/:id/files?path=/path` — Write file via SFTP (`{ "content": "..." }`).
+* `POST /api/sessions/:id/handoff` — Yield session control to the human operator (`message`).
+* `DELETE /api/sessions/:id` — Disconnect SSH session.
 
 ## License
 
@@ -55,4 +101,4 @@ MIT
 
 ## Disclaimer
 
-**Use at your own risk.** This tool is provided "as is", without warranty of any kind, express or implied. The authors and contributors are not responsible for any damage, loss of data, security breaches, compromised credentials, or any other unintended consequences resulting from the use of this software. By using this tool, you acknowledge that connecting AI agents to remote systems carries inherent security risks, and you assume full responsibility for monitoring their actions and securing your infrastructure.
+**Use at your own risk.** This tool is provided "as is", without warranty of any kind, express or implied. Connecting AI agents to remote systems carries inherent security risks; you assume full responsibility for monitoring agent actions and securing your infrastructure.

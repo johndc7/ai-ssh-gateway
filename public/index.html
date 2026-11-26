@@ -6,8 +6,8 @@
     <title>AI SSH Gateway</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.9/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-yEPZ7jP9S0QKiUQ0m3jjsO4ProIW7wvR9gXkI7JOGa2XVsw53Yke2bsdkBbjmmiX" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/css/xterm.css" integrity="sha384-n2n7twoohnW+d3myBKaUgl7DSiwidw6MkQy9oesGzkPpMjejKRR3XlnD+5yCdtBD" crossorigin="anonymous" />
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="material-dark">
@@ -17,9 +17,15 @@
                 <span class="material-icons me-2" aria-hidden="true">terminal</span>
                 AI SSH Gateway
             </a>
-            <div class="ms-auto d-flex align-items-center" aria-live="polite">
-                <div id="server-status" class="status-indicator status-connecting" aria-hidden="true"></div>
-                <span class="ms-2 text-secondary small" id="server-status-text">Connecting...</span>
+            <div class="ms-auto d-flex align-items-center gap-3" aria-live="polite">
+                <span id="netbird-badge" class="chip chip-netbird d-none" title="NetBird CLI detected">
+                    <span class="material-icons size-14 me-1" aria-hidden="true">hub</span>
+                    <span id="netbird-badge-text">NetBird Ready</span>
+                </span>
+                <div class="d-flex align-items-center">
+                    <div id="server-status" class="status-indicator status-connecting" aria-hidden="true"></div>
+                    <span class="ms-2 text-secondary small" id="server-status-text">Connecting...</span>
+                </div>
             </div>
         </div>
     </nav>
@@ -44,9 +50,12 @@
                     </div>
                 </div>
                 
-                <div class="sidebar-section mt-auto pb-4">
+                <div class="sidebar-section mt-auto pb-4 d-flex flex-column gap-2">
+                    <button class="btn btn-outline-info btn-sm w-100 d-flex align-items-center justify-content-center" data-bs-toggle="modal" data-bs-target="#localTerminalModal" aria-label="Open local terminal modal">
+                        <span class="material-icons size-16 me-1" aria-hidden="true">terminal</span> Local Terminal
+                    </button>
                     <button class="btn btn-outline-secondary btn-sm w-100 d-flex align-items-center justify-content-center" data-bs-toggle="modal" data-bs-target="#manualConnectModal" aria-label="Open manual connection modal">
-                        <span class="material-icons size-16 me-1" aria-hidden="true">add</span> Manual Connection
+                        <span class="material-icons size-16 me-1" aria-hidden="true">add</span> Manual SSH
                     </button>
                 </div>
             </div>
@@ -56,9 +65,10 @@
                 <div id="terminal-header" class="mb-3 d-none animate-fade-in">
                     <div class="card bg-dark-2 border-secondary shadow-sm">
                         <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <div class="d-flex align-items-center">
-                                <span class="material-icons text-primary me-2" aria-hidden="true">computer</span>
-                                <span id="active-session-name" class="fw-medium me-3 text-light">Session</span>
+                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                <span class="material-icons text-primary" aria-hidden="true">computer</span>
+                                <span id="active-session-name" class="fw-medium text-light me-1">Session</span>
+                                <span id="transport-chip" class="chip chip-netbird d-none">NetBird</span>
                                 <div id="control-chip" class="chip chip-ai" aria-live="polite">
                                     <span class="material-icons me-1 size-14" aria-hidden="true">auto_fix_high</span>
                                     AI Control
@@ -101,12 +111,14 @@
                             <div class="material-icons text-primary mb-3 font-size-64" aria-hidden="true">terminal</div>
                             <h4 class="text-light mb-3">No Active Sessions</h4>
                             <p class="text-secondary mb-4">
-                                Connect to a server manually or wait for a remote request to open a session. 
-                                Authorizing a session will securely open an SSH tunnel in memory.
+                                Open a local shell (<code>pwsh</code>, <code>powershell</code>, <code>cmd</code>), connect to an SSH / NetBird server manually, or wait for an AI agent request.
                             </p>
-                            <div class="d-flex gap-2 justify-content-center">
+                            <div class="d-flex gap-2 justify-content-center flex-wrap">
+                                <button class="btn btn-outline-info px-4 d-flex align-items-center" data-bs-toggle="modal" data-bs-target="#localTerminalModal" aria-label="Open local terminal modal">
+                                    <span class="material-icons size-16 me-1" aria-hidden="true">terminal</span> Local Terminal
+                                </button>
                                 <button class="btn btn-primary px-4" data-bs-toggle="modal" data-bs-target="#manualConnectModal" aria-label="Open manual connection modal">
-                                    Manual Connect
+                                    Manual SSH
                                 </button>
                             </div>
                         </div>
@@ -118,11 +130,9 @@
     </div>
 
     <!-- Toast Container -->
-    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container" style="z-index: 1080;" aria-live="polite">
-        <!-- Toasts will be injected here -->
-    </div>
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container" style="z-index: 1080;" aria-live="polite"></div>
 
-    <!-- Modals -->
+    <!-- Authorize AI Session Modal -->
     <div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content bg-dark border-secondary">
@@ -131,28 +141,89 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p id="modal-request-desc"></p>
+                    <p id="modal-request-desc" class="text-secondary small mb-3"></p>
                     <form id="auth-form">
                         <input type="hidden" id="modal-request-id">
-                        <div class="mb-3">
-                            <label for="modal-host" class="form-label">Host</label>
-                            <input type="text" id="modal-host" class="form-control bg-dark text-light border-secondary" required>
+                        <input type="hidden" id="modal-request-type" value="ssh">
+
+                        <div id="modal-local-fields" class="d-none">
+                            <div class="alert alert-warning bg-dark-2 border-warning border-opacity-50 text-warning small">
+                                <strong>Local Machine Access:</strong> Approving grants the AI agent interactive access to a shell running directly on this computer.
+                            </div>
+                            <div class="mb-3">
+                                <label for="modal-local-shell" class="form-label">Local Shell</label>
+                                <select id="modal-local-shell" class="form-select bg-dark text-light border-secondary">
+                                    <option value="pwsh">PowerShell 7 (pwsh)</option>
+                                    <option value="powershell">Windows PowerShell (powershell.exe)</option>
+                                    <option value="cmd">Command Prompt (cmd.exe)</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="modal-local-cwd" class="form-label">Working Directory</label>
+                                <input type="text" id="modal-local-cwd" class="form-control bg-dark text-light border-secondary" placeholder="Default working directory">
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="modal-username" class="form-label">Username</label>
-                            <input type="text" id="modal-username" class="form-control bg-dark text-light border-secondary" required>
+
+                        <div id="modal-ssh-fields">
+                            <div class="row g-2 mb-3">
+                                <div class="col-9">
+                                    <label for="modal-host" class="form-label">Host / NetBird Peer</label>
+                                    <input type="text" id="modal-host" class="form-control bg-dark text-light border-secondary" required>
+                                </div>
+                                <div class="col-3">
+                                    <label for="modal-port" class="form-label">Port</label>
+                                    <input type="number" id="modal-port" class="form-control bg-dark text-light border-secondary" value="22" min="1" max="65535" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="modal-username" class="form-label">Username</label>
+                                <input type="text" id="modal-username" class="form-control bg-dark text-light border-secondary" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="modal-auth-type" class="form-label">Connection &amp; Auth Method</label>
+                                <select id="modal-auth-type" class="form-select bg-dark text-light border-secondary">
+                                    <option value="password">SSH Password</option>
+                                    <option value="netbird">NetBird SSH (Identity / SSO)</option>
+                                    <option value="privateKey">SSH Private Key</option>
+                                    <option value="agent">Local SSH Agent</option>
+                                </select>
+                            </div>
+                            <div id="modal-password-group" class="mb-3">
+                                <label for="modal-password" class="form-label">Password</label>
+                                <input type="password" id="modal-password" class="form-control bg-dark text-light border-secondary">
+                            </div>
+                            <div id="modal-key-group" class="mb-3 d-none">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label for="modal-private-key" class="form-label mb-0">Private Key (PEM / OpenSSH)</label>
+                                    <label class="btn btn-outline-secondary btn-sm py-0 px-2 font-size-07rem">
+                                        Load File <input type="file" id="modal-key-file" class="d-none">
+                                    </label>
+                                </div>
+                                <textarea id="modal-private-key" class="form-control bg-dark text-light border-secondary font-monospace small" rows="4" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"></textarea>
+                                <label for="modal-passphrase" class="form-label mt-2">Key Passphrase (Optional)</label>
+                                <input type="password" id="modal-passphrase" class="form-control bg-dark text-light border-secondary" placeholder="Leave blank if unencrypted">
+                            </div>
+                            <div id="modal-netbird-group" class="alert alert-secondary bg-dark-2 border-secondary text-secondary small d-none">
+                                Uses local <code>netbird ssh</code> tunnel &amp; OIDC/JWT identity. If your token is expired, a NetBird SSO prompt will open in your browser.
+                            </div>
+                            <div id="modal-agent-group" class="alert alert-secondary bg-dark-2 border-secondary text-secondary small d-none">
+                                Authenticates via your local SSH Agent (<code>SSH_AUTH_SOCK</code> or Windows OpenSSH Agent).
+                            </div>
+                            <div id="modal-strict-group" class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="modal-strict-host">
+                                <label class="form-check-label small text-secondary" for="modal-strict-host">
+                                    Require host key in <code>~/.ssh/known_hosts</code> (Strict)
+                                </label>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="modal-password" class="form-label">Password</label>
-                            <input type="password" id="modal-password" class="form-control bg-dark text-light border-secondary" required autofocus>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">Authorize & Connect</button>
+                        <button type="submit" class="btn btn-primary w-100">Authorize &amp; Connect</button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Manual Connect Modal -->
     <div class="modal fade" id="manualConnectModal" tabindex="-1" aria-labelledby="manualConnectModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content bg-dark border-secondary">
@@ -165,17 +236,55 @@
                 </div>
                 <div class="modal-body">
                     <form id="manual-connect-form">
-                        <div class="mb-3">
-                            <label for="manual-host" class="form-label">Hostname / IP</label>
-                            <input type="text" id="manual-host" class="form-control bg-dark text-light border-secondary" placeholder="e.g. 192.168.1.10" required>
+                        <div class="row g-2 mb-3">
+                            <div class="col-9">
+                                <label for="manual-host" class="form-label">Hostname / IP / NetBird Peer</label>
+                                <input type="text" id="manual-host" class="form-control bg-dark text-light border-secondary" placeholder="e.g. 192.168.1.10 or peer.netbird.cloud" required>
+                            </div>
+                            <div class="col-3">
+                                <label for="manual-port" class="form-label">Port</label>
+                                <input type="number" id="manual-port" class="form-control bg-dark text-light border-secondary" value="22" min="1" max="65535" required>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label for="manual-user" class="form-label">Username</label>
                             <input type="text" id="manual-user" class="form-control bg-dark text-light border-secondary" placeholder="e.g. root" required>
                         </div>
                         <div class="mb-3">
+                            <label for="manual-auth-type" class="form-label">Connection &amp; Auth Method</label>
+                            <select id="manual-auth-type" class="form-select bg-dark text-light border-secondary">
+                                <option value="password">SSH Password</option>
+                                <option value="netbird">NetBird SSH (Identity / SSO)</option>
+                                <option value="privateKey">SSH Private Key</option>
+                                <option value="agent">Local SSH Agent</option>
+                            </select>
+                        </div>
+                        <div id="manual-password-group" class="mb-3">
                             <label for="manual-password" class="form-label">Password</label>
-                            <input type="password" id="manual-password" class="form-control bg-dark text-light border-secondary" placeholder="Enter SSH password" required>
+                            <input type="password" id="manual-password" class="form-control bg-dark text-light border-secondary" placeholder="Enter SSH password">
+                        </div>
+                        <div id="manual-key-group" class="mb-3 d-none">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label for="manual-private-key" class="form-label mb-0">Private Key (PEM / OpenSSH)</label>
+                                <label class="btn btn-outline-secondary btn-sm py-0 px-2 font-size-07rem">
+                                    Load File <input type="file" id="manual-key-file" class="d-none">
+                                </label>
+                            </div>
+                            <textarea id="manual-private-key" class="form-control bg-dark text-light border-secondary font-monospace small" rows="4" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"></textarea>
+                            <label for="manual-passphrase" class="form-label mt-2">Key Passphrase (Optional)</label>
+                            <input type="password" id="manual-passphrase" class="form-control bg-dark text-light border-secondary" placeholder="Leave blank if unencrypted">
+                        </div>
+                        <div id="manual-netbird-group" class="alert alert-secondary bg-dark-2 border-secondary text-secondary small d-none">
+                            Uses local <code>netbird ssh</code> tunnel &amp; OIDC/JWT identity. Make sure NetBird SSH is enabled on the target peer.
+                        </div>
+                        <div id="manual-agent-group" class="alert alert-secondary bg-dark-2 border-secondary text-secondary small d-none">
+                            Authenticates via your local SSH Agent (<code>SSH_AUTH_SOCK</code> or Windows OpenSSH Agent).
+                        </div>
+                        <div id="manual-strict-group" class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="manual-strict-host">
+                            <label class="form-check-label small text-secondary" for="manual-strict-host">
+                                Require host key in <code>~/.ssh/known_hosts</code> (Strict)
+                            </label>
                         </div>
                         <button type="submit" class="btn btn-primary w-100 py-2 mt-2">Connect to Server</button>
                     </form>
@@ -184,10 +293,46 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+    <!-- Local Terminal Modal -->
+    <div class="modal fade" id="localTerminalModal" tabindex="-1" aria-labelledby="localTerminalModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark border-secondary">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title d-flex align-items-center" id="localTerminalModalLabel">
+                        <span class="material-icons me-2 text-info" aria-hidden="true">terminal</span>
+                        Open Local Terminal
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="local-terminal-form">
+                        <div class="mb-3">
+                            <label for="local-shell-select" class="form-label">Shell</label>
+                            <select id="local-shell-select" class="form-select bg-dark text-light border-secondary" required>
+                                <option value="pwsh">PowerShell 7 (pwsh)</option>
+                                <option value="powershell">Windows PowerShell (powershell.exe)</option>
+                                <option value="cmd">Command Prompt (cmd.exe)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="local-cwd" class="form-label">Working Directory (Optional)</label>
+                            <input type="text" id="local-cwd" class="form-control bg-dark text-light border-secondary" placeholder="Defaults to gateway working directory">
+                        </div>
+                        <div class="mb-3">
+                            <label for="local-session-name" class="form-label">Session Label (Optional)</label>
+                            <input type="text" id="local-session-name" class="form-control bg-dark text-light border-secondary" placeholder="e.g. Local PowerShell">
+                        </div>
+                        <button type="submit" class="btn btn-info w-100 py-2 mt-2 fw-medium">Start Local Terminal</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.9/dist/js/bootstrap.bundle.min.js" integrity="sha384-WyOxWvTyr1QaMPfiPJSv76iReVthorl5uWlFtZPyK0IEB0hGzo9y5Bp9mYanr8Bu" crossorigin="anonymous"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/lib/xterm.js" integrity="sha384-f/1U6Z9wM4D71a5eRXEZnyOTMOvjqxr2XLwh+Go1OvIl3L3tOcvUrzudnhbECwl4" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.11.0/lib/addon-fit.js" integrity="sha384-txoiwu4RR2GD3qySbaj+BbzibkLbSJRcfqGYMu6z1EqHil4A2dyBiBW5dlacG6OR" crossorigin="anonymous"></script>
     <script src="app.js"></script>
 </body>
 </html>
